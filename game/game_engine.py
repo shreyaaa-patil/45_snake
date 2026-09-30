@@ -17,6 +17,7 @@ class GameEngine:
         self.grid_height = height // self.cell_size
 
         self.snake = Snake(self.grid_width // 2, self.grid_height // 2, self.cell_size)
+        self._last_move_direction = self.snake.direction
         self.food = Food(self.grid_width, self.grid_height, self.cell_size)
 
         self.score = 0
@@ -26,18 +27,31 @@ class GameEngine:
         self._frame_counter = 0
 
         self.game_over = False
+        self.paused = False
         self._game_over_logged = False
 
     def handle_keydown(self, key):
-        # Direction changes are applied immediately on key press.
-        if key in (pygame.K_UP, pygame.K_w):
-            self.snake.set_direction(0, -1)
-        elif key in (pygame.K_DOWN, pygame.K_s):
-            self.snake.set_direction(0, 1)
-        elif key in (pygame.K_LEFT, pygame.K_a):
-            self.snake.set_direction(-1, 0)
-        elif key in (pygame.K_RIGHT, pygame.K_d):
-            self.snake.set_direction(1, 0)
+        directions = {
+            pygame.K_UP: (0, -1),
+            pygame.K_w: (0, -1),
+            pygame.K_DOWN: (0, 1),
+            pygame.K_s: (0, 1),
+            pygame.K_LEFT: (-1, 0),
+            pygame.K_a: (-1, 0),
+            pygame.K_RIGHT: (1, 0),
+            pygame.K_d: (1, 0),
+        }
+        direction = directions.get(key)
+        if direction is None:
+            return
+
+        current_dx, current_dy = self._last_move_direction
+        if direction == (-current_dx, -current_dy):
+            self.paused = True
+            return
+
+        self.snake.set_direction(*direction)
+        self.paused = False
 
     def handle_input(self):
         # Reserved for continuously-held-key input (not used for a
@@ -45,7 +59,7 @@ class GameEngine:
         pass
 
     def update(self):
-        if self.game_over:
+        if self.game_over or self.paused:
             return
 
         self._frame_counter += 1
@@ -55,6 +69,7 @@ class GameEngine:
         self._frame_counter = 0
 
         self.snake.move()
+        self._last_move_direction = self.snake.direction
 
         if self.snake.collides_with_wall(self.grid_width, self.grid_height):
             self.game_over = True
@@ -80,6 +95,10 @@ class GameEngine:
         # Draw score
         score_text = self.font.render(f"Score: {self.score}", True, WHITE)
         screen.blit(score_text, (10, 10))
+
+        if self.paused and not self.game_over:
+            paused_text = self.font.render("Paused", True, WHITE)
+            screen.blit(paused_text, paused_text.get_rect(center=(self.width // 2, self.height // 2)))
 
         if self.game_over and not self._game_over_logged:
             # NOTE: no proper game-over screen yet - see Task 2 in the README.
