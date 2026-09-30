@@ -28,7 +28,10 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
             if event.type == pygame.KEYDOWN:
-                engine.handle_keydown(event.key)
+                if engine.game_over:
+                    running = False
+                else:
+                    engine.handle_keydown(event.key)
 
         engine.handle_input()
         engine.update()
